@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Notes App</title>
+    <style>
+        body {
+            font-family: Georgia;
+            background: #A9A9A9;
+            padding: 20px;
+        }
+        h1 { color: #333; }
+
+        button {
+            padding: 6px 10px;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+
+        input, textarea {
+            width: 300px;
+            padding: 5px;
+            margin: 5px 0;
+        }
+
+        .note {
+            background: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .delete-btn {
+            background: crimson;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Notes App</h1>
+
+<button onclick="setupDB()">Создать БД</button>
+<button onclick="getNotes()">Показать все заметки</button>
+
+<h2>Найти заметку</h2>
+<input type="number" id="noteId" placeholder="Введите ID">
+<button onclick="getNoteById()">Найти</button>
+
+<h2>Добавить заметку</h2>
+<input type="text" id="title" placeholder="Название"><br>
+<textarea id="content" placeholder="Описание"></textarea><br>
+<button onclick="addNote()">Добавить</button>
+
+<h2>Результат:</h2>
+<div id="result"></div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function setupDB() {
+    const res = await fetch(`${API}/setup_database`, { method: "POST" });
+    const data = await res.json();
+    alert(data.message);
+}
+
+async function getNotes() {
+    const res = await fetch(`${API}/notes`);
+    const data = await res.json();
+    showResult(data);
+}
+
+async function getNoteById() {
+    const id = document.getElementById("noteId").value;
+    const res = await fetch(`${API}/notes/${id}`);
+
+    if (res.status === 404) {
+        alert("Заметка не найдена");
+        return;
+    }
+
+    const data = await res.json();
+    showResult([data]);
+}
+
+async function addNote() {
+    const title = document.getElementById("title").value;
+    const content = document.getElementById("content").value;
+
+    const res = await fetch(`${API}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content })
+    });
+
+    await res.json();
+    alert("Заметка добавлена!");
+
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
+
+    getNotes();
+}
+
+async function deleteNote(id) {
+    const confirmDelete = confirm("Удалить заметку?");
+    if (!confirmDelete) return;
+
+    const res = await fetch(`${API}/notes/${id}`, {
+        method: "DELETE"
+    });
+
+    if (res.status === 404) {
+        alert("Заметка не найдена");
+        return;
+    }
+
+    alert("Заметка удалена!");
+    getNotes();
+}
+
+function showResult(notes) {
+    const result = document.getElementById("result");
+    result.innerHTML = "";
+
+    notes.forEach(note => {
+        result.innerHTML += `
+            <div class="note">
+                <h3>${note.title}</h3>
+                <p>${note.content}</p>
+                <small>ID: ${note.id}</small><br>
+                <button class="delete-btn" onclick="deleteNote(${note.id})">
+                    🗑 Удалить
+                </button>
+            </div>
+        `;
+    });
+}
+</script>
+
+</body>
+</html>
